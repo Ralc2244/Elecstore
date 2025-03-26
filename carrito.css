@@ -1,0 +1,88 @@
+/* Estilos generales */
+body {
+  background-color: white;
+  color: black;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Barra de navegación */
+.navbar {
+  background-color: black;
+  padding: 15px;
+}
+
+.navbar a {
+  color: #fff;
+  text-decoration: none;
+  padding: 10px;
+}
+
+.navbar a:hover {
+  background-color: #222;
+}
+
+/* Tabla del carrito */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+  color: black;
+  margin-top: 20px;
+}
+
+th,
+td {
+  border: 1px solid black;
+  padding: 10px;
+  text-align: center;
+}
+
+th {
+  background-color: black;
+  color: white;
+}
+
+/* Botones */
+button {
+  background-color: #fff;
+  color: #000;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button:hover {
+  background-color: #bbb;
+}
+
+/* Contenedor de pago */
+.payment-container {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.payment-container button {
+  background-color: white;
+  color: #000;
+  padding: 10px 15px;
+  border-radius: 5px;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+}
+
+.payment-container button:hover {
+  background-color: #bbb;
+}
+
+/* Mensaje cuando el carrito está vacío */
+td[colspan="5"] {
+  text-align: center;
+  font-size: 1.2rem;
+  color: black;
+}

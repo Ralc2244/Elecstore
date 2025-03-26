@@ -1,0 +1,102 @@
+/* Estilos generales */
+body {
+  background-color: white;
+  color: black;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Contenedor principal */
+.container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 20px;
+}
+
+/* Barra de navegación */
+.navbar {
+  background-color: #111; /* Negro más claro */
+  padding: 15px;
+}
+
+.navbar a {
+  color: #fff;
+  text-decoration: none;
+  padding: 10px;
+}
+
+.navbar a:hover {
+  background-color: #222;
+}
+
+/* Detalles del producto */
+h1 {
+  color: #fff;
+  font-size: 2rem;
+}
+
+.text-muted {
+  color: #bbb;
+}
+
+.img-fluid {
+  max-width: 100%;
+  border-radius: 8px;
+  border: 2px solid #fff;
+}
+
+/* Botones */
+.btn {
+  background-color: #fff;
+  color: #000;
+  border: none;
+  padding: 10px 15px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.btn:hover {
+  background-color: #bbb;
+  color: #000;
+}
+
+.btn-agregar {
+  background-color: #fff;
+  color: #000;
+  font-weight: bold;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-agregar:hover {
+  background-color: #bbb;
+}
+
+/* Input de cantidad */
+.input-group {
+  margin-bottom: 15px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #333;
+  background-color: #222;
+  color: #fff;
+  border-radius: 5px;
+}
+
+/* Footer */
+footer {
+  background-color: #111;
+  text-align: center;
+  padding: 15px;
+  margin-top: 20px;
+}
+
+footer p {
+  color: #bbb;
+}

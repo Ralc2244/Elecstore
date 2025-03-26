@@ -1,0 +1,19 @@
+{
+    "name": "hp/elecstore",
+    "autoload": {
+        "psr-4": {
+            "Hp\\Elecstore\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Rebecota",
+            "email": "lopezchavezalex7@gmail.com"
+        }
+    ],
+    "require": {
+        "firebase/php-jwt": "^6.11",
+        "dompdf/dompdf": "^3.1",
+        "phpmailer/phpmailer": "^6.9"
+    }
+}
