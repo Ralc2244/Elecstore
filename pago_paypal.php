@@ -45,12 +45,14 @@ $mysqli->close();
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pago con PayPal</title>
     <script src="https://www.paypal.com/sdk/js?client-id=Abr-T4VBBcG9sSfmJjJNtrYoKdTdl8IruLl3HT4zj1jN83i-Ie3f-XX5AjldUs5favXsRiFSngrYUNk6&currency=MXN"></script>
 </head>
+
 <body>
     <h2>Total a pagar: $<?= number_format($total, 2); ?> MXN</h2>
     <div id="paypal-button-container"></div>
@@ -60,7 +62,9 @@ $mysqli->close();
             createOrder: function(data, actions) {
                 return actions.order.create({
                     purchase_units: [{
-                        amount: { value: '<?= number_format($total, 2, '.', ''); ?>' }
+                        amount: {
+                            value: '<?= number_format($total, 2, '.', ''); ?>'
+                        }
                     }]
                 });
             },
@@ -73,4 +77,5 @@ $mysqli->close();
         }).render('#paypal-button-container');
     </script>
 </body>
+
 </html>

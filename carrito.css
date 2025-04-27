@@ -1,88 +1,153 @@
 /* Estilos generales */
 body {
-  background-color: white;
-  color: black;
+  background-color: #fff;
+  color: #000;
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
 }
 
-/* Barra de navegación */
-.navbar {
-  background-color: black;
-  padding: 15px;
-}
-
-.navbar a {
-  color: #fff;
+a {
   text-decoration: none;
-  padding: 10px;
+  color: #000;
 }
 
-.navbar a:hover {
-  background-color: #222;
+a:hover {
+  color: #666;
 }
 
-/* Tabla del carrito */
+/* Estilos de la cabecera */
+header {
+  background-color: #000;
+  color: #fff;
+}
+
+.navbar {
+  margin-bottom: 20px;
+}
+
+.navbar-brand,
+.navbar-nav .nav-link {
+  color: #fff !important;
+}
+
+.navbar-nav .nav-link:hover {
+  color: #ddd !important;
+}
+
+/* Estilos de la tabla */
 table {
   width: 100%;
   border-collapse: collapse;
-  background-color: white;
-  color: black;
   margin-top: 20px;
 }
 
-th,
-td {
-  border: 1px solid black;
+table th,
+table td {
   padding: 10px;
-  text-align: center;
+  text-align: left;
+  border: 1px solid #000;
 }
 
-th {
-  background-color: black;
-  color: white;
+table th {
+  background-color: #000;
+  color: #fff;
 }
 
-/* Botones */
-button {
+table td {
   background-color: #fff;
-  color: #000;
+}
+
+/* Estilos para el carrito */
+table tr td[colspan="5"] {
+  color: #888;
+  font-style: italic;
+}
+
+/* Estilo de los botones */
+button {
+  background-color: #000;
+  color: #fff;
+  padding: 5px 10px;
   border: none;
-  padding: 8px 12px;
   cursor: pointer;
-  font-weight: bold;
+  border-radius: 5px;
 }
 
 button:hover {
-  background-color: #bbb;
+  background-color: #333;
 }
 
-/* Contenedor de pago */
+/* Estilo de los badges */
+.badge {
+  font-size: 0.8rem;
+  background-color: #000;
+  color: #fff;
+  padding: 5px;
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+/* Estilo del total */
+#total {
+  font-weight: bold;
+  color: #000;
+}
+
+/* Contenedor de pagos */
 .payment-container {
-  display: flex;
-  justify-content: center;
-  gap: 15px;
   margin-top: 20px;
+  text-align: center;
+}
+
+.payment-container form {
+  display: inline-block;
+  margin: 10px;
 }
 
 .payment-container button {
-  background-color: white;
-  color: #000;
+  background-color: #000;
+  color: #fff;
   padding: 10px 15px;
-  border-radius: 5px;
-  font-weight: bold;
   border: none;
+  border-radius: 5px;
   cursor: pointer;
 }
 
 .payment-container button:hover {
-  background-color: #bbb;
+  background-color: #333;
 }
 
-/* Mensaje cuando el carrito está vacío */
-td[colspan="5"] {
+/* Estilos de los enlaces en el carrito */
+table tr td {
   text-align: center;
-  font-size: 1.2rem;
-  color: black;
+}
+
+/* Estilos para el mensaje de carrito vacío */
+table tr td[colspan="5"] {
+  color: #888;
+  font-style: italic;
+}
+
+/* Estilos del carrito vacío */
+.payment-container button,
+button.eliminar-btn {
+  background-color: #000;
+  color: #fff;
+}
+
+.payment-container button:hover,
+button.eliminar-btn:hover {
+  background-color: #333;
+}
+
+/* Ajustes de color de enlaces */
+a {
+  color: #000;
+}
+
+a:hover {
+  color: #666;
 }

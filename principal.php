@@ -26,7 +26,20 @@ if ($resultado_categorias) {
 $categoria_seleccionada = isset($_GET['categoria_id']) ? (int)$_GET['categoria_id'] : null;
 $busqueda = isset($_GET['q']) ? trim($_GET['q']) : "";
 
-$productos = [];
+if (!empty($busqueda)) {
+    // Sanitize the search term before using it in the query
+    $busqueda = $mysqli->real_escape_string($busqueda);  // Evitar inyecciones SQL
+
+    // Guardar la búsqueda en la base de datos
+    $usuario_id = $_SESSION['usuario_id'];  // Obtener el ID del usuario desde la sesión
+    $sql_insert_busqueda = "INSERT INTO busquedas (usuario_id, termino_busqueda) VALUES (?, ?)";
+    $stmt = $mysqli->prepare($sql_insert_busqueda);
+    $stmt->bind_param("is", $usuario_id, $busqueda);  // Enlazar parámetros
+    $stmt->execute();
+    $stmt->close();
+}
+
+// Consulta de productos con búsqueda flexible
 $sql_productos = "SELECT DISTINCT productos.id, productos.nombre, productos.descripcion, productos.precio, 
 productos.existencia, productos.ruta_imagen
     FROM productos 
@@ -34,12 +47,13 @@ productos.existencia, productos.ruta_imagen
     ON productos.id = productotienecategoria.producto_id
     WHERE 1=1";
 
+// Filtrar por categoría si se seleccionó alguna
 if ($categoria_seleccionada) {
     $sql_productos .= " AND productotienecategoria.categoria_id = $categoria_seleccionada";
 }
 
+// Filtrar por término de búsqueda
 if (!empty($busqueda)) {
-    $busqueda = $mysqli->real_escape_string($busqueda);
     $sql_productos .= " AND (productos.nombre LIKE '%$busqueda%' OR productos.descripcion LIKE '%$busqueda%')";
 }
 
@@ -56,6 +70,7 @@ $mysqli->close();
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -63,9 +78,10 @@ $mysqli->close();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="principal2.css">
 </head>
+
 <body>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <header>
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <div class="container">
@@ -98,14 +114,14 @@ $mysqli->close();
             </div>
         </nav>
     </header>
-    
+
     <?php
     if (isset($_SESSION['mensaje_qr'])) {
         echo "<script>alert('" . $_SESSION['mensaje_qr'] . "');</script>";
         unset($_SESSION['mensaje_qr']);
     }
     ?>
-    
+
     <main class="container mt-4">
         <div class="row">
             <div class="col-md-3">
@@ -134,16 +150,15 @@ $mysqli->close();
                                 <div class="card shadow-sm">
                                     <img src="<?php echo htmlspecialchars($producto['ruta_imagen']); ?>" class="card-img-top" alt="<?php echo htmlspecialchars($producto['nombre']); ?>">
                                     <div class="card-body">
-    <h5 class="card-title"><?php echo htmlspecialchars($producto['nombre']); ?></h5>
-    <p class="card-text">Precio: $<?php echo number_format($producto['precio'], 2); ?></p>
-    <p class="card-text">Stock disponible: <span id="existencia-<?php echo $producto['id']; ?>"><?php echo $producto['existencia']; ?></span></p>
-    <div class="d-flex justify-content-between align-items-center">
-        <div class="btn-group">
-            <a href="detalles.php?id=<?php echo $producto['id']; ?>" class="btn btn-ver-detalles">Ver Detalles</a>
-        </div>
-    </div>
-</div>
-
+                                        <h5 class="card-title"><?php echo htmlspecialchars($producto['nombre']); ?></h5>
+                                        <p class="card-text">Precio: $<?php echo number_format($producto['precio'], 2); ?></p>
+                                        <p class="card-text">Stock disponible: <span id="existencia-<?php echo $producto['id']; ?>"><?php echo $producto['existencia']; ?></span></p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="btn-group">
+                                                <a href="detalles.php?id=<?php echo $producto['id']; ?>" class="btn btn-ver-detalles">Ver Detalles</a>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -153,28 +168,5 @@ $mysqli->close();
         </div>
     </main>
 </body>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Agregar un producto al carrito
-    document.querySelectorAll('.btn-agregar-carrito').forEach(button => {
-        button.addEventListener('click', function(event) {
-            let productoId = this.getAttribute('data-id');
-            let existencia = 1;  // Por ejemplo, aumentar la cantidad de 1
 
-            fetch('actualizar_stock.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `producto_id=${productoId}&existencia=${existencia}`
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // Actualiza el stock en la interfaz
-                    document.getElementById(`stock-${productoId}`).innerText = data.nuevo_stock;
-                }
-            });
-        });
-    });
-});
-</script>
 </html>

@@ -23,9 +23,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["producto_id"], $_POST[
         $stmt->bind_param("iis", $usuario_id, $producto_id, $comentario);
 
         if ($stmt->execute()) {
-            $mensaje_exito = "✅ ¡Comentario enviado con éxito!";
+            $mensaje_exito = "¡Comentario enviado con éxito!";
         } else {
-            $mensaje_error = "❌ Error al enviar el comentario.";
+            $mensaje_error = "Error al enviar el comentario.";
         }
         $stmt->close();
     }
@@ -49,6 +49,7 @@ $result = $stmt->get_result();
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -56,64 +57,66 @@ $result = $stmt->get_result();
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="comentarios.css">
 </head>
+
 <body>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-<header>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="principal.php">Elecstore</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+    <header>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" href="principal.php">Elecstore</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
 
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="principal.php">Principal</a></li>
-                    <li class="nav-item"><a class="nav-link" href="carrito.php">Mis Pedidos</a></li>
-                    <li class="nav-item"><a class="nav-link" href="historial.php">Mis Compras</a></li>
-                    <li class="nav-item"><a class="nav-link" href="comentarios.php">Comentarios</a></li>
-                    <li class="nav-item"><a class="nav-link" href="perfil_usuario.php">Mi perfil</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-</header>
-
-<div class="container mt-5">
-    <h2 class="mb-4">Mis Comentarios</h2>
-
-    <?php if (isset($mensaje_exito)): ?>
-        <div class="alert alert-success"><?= htmlspecialchars($mensaje_exito) ?></div>
-    <?php elseif (isset($mensaje_error)): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($mensaje_error) ?></div>
-    <?php endif; ?>
-
-    <div class="row">
-        <?php while ($row = $result->fetch_assoc()): ?>
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card">
-                    <img src="imagenes/<?= htmlspecialchars($row['ruta_imagen']); ?>" class="card-img-top" alt="<?= htmlspecialchars($row['nombre']); ?>">
-                    <div class="card-body">
-                        <h5 class="card-title"><?= htmlspecialchars($row['nombre']); ?></h5>
-                        <p class="card-text">Precio: $<?= number_format($row['precio'], 2); ?> MXN</p>
-                        
-                        <!-- Formulario de Comentarios -->
-                        <form method="post">
-                            <input type="hidden" name="producto_id" value="<?= $row['id']; ?>">
-                            <div class="mb-3">
-                                <textarea name="comentario" class="form-control" placeholder="¿Qué opinas de este producto?..." required></textarea>
-                            </div>
-                            <button type="submit" class="btn-agregar">Enviar Comentario</button>
-                        </form>
-                    </div>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item"><a class="nav-link" href="principal.php">Principal</a></li>
+                        <li class="nav-item"><a class="nav-link" href="carrito.php">Mis Pedidos</a></li>
+                        <li class="nav-item"><a class="nav-link" href="historial.php">Mis Compras</a></li>
+                        <li class="nav-item"><a class="nav-link" href="comentarios.php">Comentarios</a></li>
+                        <li class="nav-item"><a class="nav-link" href="perfil_usuario.php">Mi perfil</a></li>
+                    </ul>
                 </div>
             </div>
-        <?php endwhile; ?>
+        </nav>
+    </header>
+
+    <div class="container mt-5">
+        <h2 class="mb-4">Mis Comentarios</h2>
+
+        <?php if (isset($mensaje_exito)): ?>
+            <div class="alert alert-success"><?= htmlspecialchars($mensaje_exito) ?></div>
+        <?php elseif (isset($mensaje_error)): ?>
+            <div class="alert alert-danger"><?= htmlspecialchars($mensaje_error) ?></div>
+        <?php endif; ?>
+
+        <div class="row">
+            <?php while ($row = $result->fetch_assoc()): ?>
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card">
+                        <img src="<?php echo htmlspecialchars($row['ruta_imagen']); ?>" class="card-img-top" alt="<?= htmlspecialchars($row['nombre']); ?>">
+                        <div class="card-body">
+                            <h5 class="card-title"><?= htmlspecialchars($row['nombre']); ?></h5>
+                            <p class="card-text">Precio: $<?= number_format($row['precio'], 2); ?> MXN</p>
+
+                            <!-- Formulario de Comentarios -->
+                            <form method="post">
+                                <input type="hidden" name="producto_id" value="<?= $row['id']; ?>">
+                                <div class="mb-3">
+                                    <textarea name="comentario" class="form-control" placeholder="¿Qué opinas de este producto?..." required></textarea>
+                                </div>
+                                <button type="submit" class="btn-agregar">Enviar Comentario</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            <?php endwhile; ?>
+        </div>
     </div>
-</div>
 
 </body>
+
 </html>
 
 <?php

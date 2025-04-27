@@ -22,15 +22,16 @@ try {
             $contrasenia = $_POST['contrasenia'];
 
             // Buscar al usuario por correo
-            $stmt = $pdo->prepare("SELECT id, nombre, contrasenia FROM usuarios WHERE email = :email");
+            $stmt = $pdo->prepare("SELECT id, nombre, email, contrasenia FROM usuarios WHERE email = :email");
             $stmt->execute(['email' => $email]);
             $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
             // Verificar contraseña
             if ($usuario && password_verify($contrasenia, $usuario['contrasenia'])) {
-                // Contraseña correcta: guardar información en sesión y redirigir
+                // Contraseña correcta: guardar información en sesión
                 $_SESSION['usuario_id'] = $usuario['id']; // Guardar ID del usuario en la sesión
                 $_SESSION['nombre'] = $usuario['nombre']; // Guardar nombre en la sesión
+                $_SESSION['email'] = $usuario['email']; // Guardar email en la sesión
                 header("Location: principal.php"); // Redirigir al panel de usuario
                 exit;
             } else {
@@ -42,4 +43,3 @@ try {
 } catch (PDOException $e) {
     echo "<p style='color: red;'>Error en la conexión: " . $e->getMessage() . "</p>";
 }
-?>
