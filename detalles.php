@@ -22,7 +22,7 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 $producto_id = (int)$_GET['id'];
 
 // Consultar detalles del producto
-$sql = "SELECT id, nombre, descripcion, precio, ruta_imagen FROM productos WHERE id = ?";
+$sql = "SELECT id, nombre, descripcion, precio, ruta_imagen, existencia FROM productos WHERE id = ?";
 $stmt = $mysqli->prepare($sql);
 $stmt->bind_param("i", $producto_id);
 $stmt->execute();
@@ -34,124 +34,210 @@ if ($resultado->num_rows === 0) {
 
 $producto = $resultado->fetch_assoc();
 
-$sql_productos = "SELECT DISTINCT productos.id, productos.nombre, productos.descripcion, productos.precio, productos.ruta_imagen, productos.existencia
-    FROM productos 
-    LEFT JOIN productotienecategoria 
-    ON productos.id = productotienecategoria.producto_id
-    WHERE 1=1";
+// Consultar descuentos aplicables al producto
+$fecha_actual = date('Y-m-d');
+$sql_descuentos = "SELECT descripcion, porcentaje_descuento, fecha_inicio, fecha_fin 
+                   FROM descuentos 
+                   WHERE producto_id = ? AND fecha_inicio <= ? AND fecha_fin >= ?";
+$stmt_descuentos = $mysqli->prepare($sql_descuentos);
+$stmt_descuentos->bind_param("iss", $producto_id, $fecha_actual, $fecha_actual);
+$stmt_descuentos->execute();
+$resultado_descuentos = $stmt_descuentos->get_result();
 
+// Guardar los descuentos aplicables
+$descuentos = [];
+while ($descuento = $resultado_descuentos->fetch_assoc()) {
+    $descuentos[] = $descuento;
+}
 
 $stmt->close();
+$stmt_descuentos->close();
 $mysqli->close();
 ?>
 
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elecstore</title>
+    <title><?= htmlspecialchars($producto['nombre']) ?> | Elecstore</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="detalles.css">
-</head>
-<body>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/detalles.css">
+    <style>
+        /* Estilos específicos para el navbar negro */
+        .navbar.bg-black {
+            background-color: #000 !important;
+        }
 
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        .navbar-dark .navbar-brand,
+        .navbar-dark .nav-link {
+            color: white !important;
+        }
+
+        .navbar-dark .nav-link.active {
+            font-weight: bold;
+        }
+
+        .btn-black-white {
+            background-color: black;
+            color: white;
+            border: 1px solid black;
+        }
+
+        .btn-black-white:hover {
+            background-color: white;
+            color: black;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar negro -->
+    <header class="mb-4">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-black">
             <div class="container">
-                <a class="navbar-brand" href="detalles.php">Elecstore</a>
+                <a class="navbar-brand" href="principal.php">ELECSTORE</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav me-auto">
                         <li class="nav-item"><a class="nav-link" href="principal.php">Principal</a></li>
-                        <li class="nav-item">
-                            <a class="nav-link position-relative" href="carrito.php" data-cantidad="<?php echo isset($_SESSION['carrito_cantidad']) ? $_SESSION['carrito_cantidad'] : 0; ?>">Mis Pedidos
-                            <?php if (isset($_SESSION['carrito_cantidad']) && $_SESSION['carrito_cantidad'] > 0): ?>
-                                <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle">
-                                    <?php echo $_SESSION['carrito_cantidad']; ?>
-                                </span>
-                            <?php endif; ?>
+                        <li class="nav-item"><a class="nav-link" href="para_ti.php">Para ti</a></li>
+                        <li class="nav-item position-relative">
+                            <a class="nav-link" href="carrito.php">
+                                <i class="fas fa-shopping-cart me-1"></i>Mis Pedidos
+                                <?php if (isset($_SESSION['carrito_cantidad']) && $_SESSION['carrito_cantidad'] > 0): ?>
+                                    <span class="badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle">
+                                        <?= $_SESSION['carrito_cantidad'] ?>
+                                    </span>
+                                <?php endif; ?>
                             </a>
                         </li>
                         <li class="nav-item"><a class="nav-link" href="historial.php">Mis Compras</a></li>
                         <li class="nav-item"><a class="nav-link" href="comentarios.php">Comentarios</a></li>
-                        <li class="nav-item"><a class="nav-link" href="perfil_usuario.php">Mi perfil</a></li>
+                        <li class="nav-item"><a class="nav-link" href="perfil_usuario.php">Mi Perfil</a></li>
                     </ul>
                 </div>
             </div>
         </nav>
     </header>
 
-    <main class="container mt-4">
+    <main class="container my-4">
         <div class="row">
             <div class="col-md-6">
-                <img src="<?php echo htmlspecialchars($producto['ruta_imagen']); ?>" class="img-fluid rounded" alt="<?php echo htmlspecialchars($producto['nombre']); ?>">
+                <div class="product-image-container mb-4">
+                    <img src="<?= htmlspecialchars($producto['ruta_imagen']) ?>"
+                        class="img-fluid rounded"
+                        alt="<?= htmlspecialchars($producto['nombre']) ?>"
+                        loading="lazy">
+                </div>
             </div>
             <div class="col-md-6">
-                <h1><?php echo htmlspecialchars($producto['nombre']); ?></h1>
-                <p class="text-muted">Precio: <strong>$<?php echo number_format($producto['precio'], 2); ?></strong></p>
-                <p><?php echo nl2br(htmlspecialchars($producto['descripcion'])); ?></p>
-                <div class="input-group mb-3">
-    <input type="number" name="cantidad" class="form-control cantidad-input" min="1" value="1" required>
-    <input type="hidden" class="producto-id" value="<?php echo $producto['id']; ?>">
-    <button class="btn btn-primary agregar-carrito" data-id="<?php echo $producto['id']; ?>">Agregar</button>
-</div>
-                <a href="principal.php" class="btn btn-secondary">Volver</a>
+                <div class="product-details">
+                    <h1 class="mb-3"><?= htmlspecialchars($producto['nombre']) ?></h1>
+
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3 class="price mb-0">$<?= number_format($producto['precio'], 2) ?></h3>
+                        <span class="badge bg-<?= ($producto['existencia'] > 0) ? 'success' : 'danger' ?>">
+                            <?= ($producto['existencia'] > 0) ? 'Disponible' : 'Agotado' ?>
+                        </span>
+                    </div>
+
+                    <div class="description mb-4">
+                        <h5 class="mb-3"><i class="fas fa-info-circle me-2"></i>Descripción</h5>
+                        <p class="text-muted"><?= nl2br(htmlspecialchars($producto['descripcion'])) ?></p>
+                    </div>
+
+                    <?php if (count($descuentos) > 0): ?>
+                        <div class="discounts mb-4">
+                            <h5 class="mb-3"><i class="fas fa-tag me-2"></i>Descuentos disponibles</h5>
+                            <div class="list-group">
+                                <?php foreach ($descuentos as $descuento): ?>
+                                    <div class="list-group-item">
+                                        <div class="d-flex justify-content-between">
+                                            <strong><?= htmlspecialchars($descuento['descripcion']) ?></strong>
+                                            <span class="badge bg-success"><?= $descuento['porcentaje_descuento'] ?>% OFF</span>
+                                        </div>
+                                        <small class="text-muted">
+                                            Válido del <?= date('d/m/Y', strtotime($descuento['fecha_inicio'])) ?> al <?= date('d/m/Y', strtotime($descuento['fecha_fin'])) ?>
+                                        </small>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="actions mt-4">
+                        <form id="add-to-cart-form" class="mb-3">
+                            <div class="input-group">
+                                <input type="number" name="cantidad" class="form-control" min="1" max="<?= $producto['existencia'] ?>" value="1" required>
+                                <input type="hidden" name="producto_id" value="<?= $producto['id'] ?>">
+                                <button class="btn btn-black-white agregar-carrito" type="button"
+                                    data-id="<?= $producto['id'] ?>"
+                                    <?= ($producto['existencia'] <= 0) ? 'disabled' : '' ?>>
+                                    <i class="fas fa-cart-plus me-2"></i>Agregar al carrito
+                                </button>
+                            </div>
+                        </form>
+                        <a href="principal.php" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Volver a la tienda
+                        </a>
+                        <a href="para_ti.php" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Más para ti
+                        </a>
+                    </div>
+                </div>
             </div>
         </div>
     </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-document.querySelectorAll('.agregar-carrito').forEach(boton => {
-    boton.addEventListener('click', function (e) {
-        e.preventDefault();
-        let productoId = this.getAttribute('data-id');
+        document.querySelectorAll('.agregar-carrito').forEach(boton => {
+            boton.addEventListener('click', function(e) {
+                e.preventDefault();
+                let productoId = this.getAttribute('data-id');
+                let cantidad = this.closest('.input-group').querySelector('input[name="cantidad"]').value;
 
-        fetch('agregar_carrito.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'producto_id=' + productoId + '&cantidad=1'
-        })
-        .then(() => {
-            let badge = document.querySelector('.nav-link[href="carrito.php"] .badge');
-            if (!badge) {
-                let misPedidos = document.querySelector('.nav-link[href="carrito.php"]');
-                let newBadge = document.createElement('span');
-                newBadge.className = "badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle";
-                newBadge.innerText = parseInt(misPedidos.getAttribute('data-cantidad')) + 1;
-                misPedidos.appendChild(newBadge);
-            } else {
-                badge.innerText = parseInt(badge.innerText) + 1;
-            }
+                fetch('agregar_carrito.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: 'producto_id=' + productoId + '&cantidad=' + cantidad
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Actualizar badge del carrito
+                            let badge = document.querySelector('.nav-link[href="carrito.php"] .badge');
+                            if (!badge) {
+                                let misPedidos = document.querySelector('.nav-link[href="carrito.php"]');
+                                let newBadge = document.createElement('span');
+                                newBadge.className = "badge bg-danger rounded-pill position-absolute top-0 start-100 translate-middle";
+                                newBadge.innerText = data.nueva_cantidad;
+                                misPedidos.appendChild(newBadge);
+                            } else {
+                                badge.innerText = data.nueva_cantidad;
+                            }
+
+                            // Mostrar mensaje de éxito
+                            alert('Producto agregado al carrito correctamente');
+                        } else {
+                            alert('Error: ' + (data.message || 'No se pudo agregar el producto al carrito'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('Ocurrió un error al agregar el producto al carrito');
+                    });
+            });
         });
-    });
-});
-</script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-$(document).ready(function() {
-    $(".agregar-carrito").click(function() {
-        var boton = $(this);
-        var productoId = boton.data("id");
-
-        $.post("agregar_carrito.php", { id: productoId }, function(respuesta) {
-            var data = JSON.parse(respuesta);
-            if (data.success) {
-                // Actualizar la cantidad de stock en pantalla
-                boton.closest(".card").find(".text-muted").text("Stock disponible: " + data.nueva_existencia);
-            } else {
-                alert("Error al agregar el producto.");
-            }
-        });
-    });
-});
-</script>
-
+    </script>
 </body>
 
 </html>
-

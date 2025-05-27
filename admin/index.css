@@ -1,0 +1,196 @@
+/* admin-styles.css */
+/* Estilos generales para el panel de administración */
+body {
+  background-color: #f8f9fa;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.admin-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+/* Navbar styles */
+.navbar-admin {
+  background-color: rgb(21, 23, 25) !important;
+  padding: 0.8rem 1rem;
+}
+
+.navbar-brand {
+  font-weight: 600;
+  font-size: 1.3rem;
+}
+
+/* Botones */
+.logout-btn {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 5px;
+  transition: background-color 0.3s;
+}
+
+.logout-btn:hover {
+  background-color: #c82333;
+}
+
+.btn-completar {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.btn-completar:hover {
+  background-color: #218838;
+}
+
+.btn-dark {
+  background-color: #343a40;
+}
+
+/* Tarjetas de estadísticas */
+.stats-card {
+  margin-bottom: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s;
+}
+
+.stats-card:hover {
+  transform: translateY(-5px);
+}
+
+.stats-card .card-body {
+  padding: 1.25rem;
+}
+
+.stats-card h5 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.stats-card h2 {
+  font-size: 1.8rem;
+  margin-bottom: 0;
+}
+
+.stats-card small {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+/* Badges */
+.badge-status {
+  font-size: 0.85em;
+  padding: 0.35em 0.65em;
+  font-weight: 500;
+}
+
+.badge-pendiente {
+  background-color: #ffc107;
+  color: #212529;
+}
+
+.badge-pagado {
+  background-color: #28a745;
+  color: white;
+}
+
+.badge-escaneado {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.badge-pendiente-escaneo {
+  background-color: #6c757d;
+  color: white;
+}
+
+/* Tabla de pedidos */
+.orders-table {
+  width: 100%;
+  margin-bottom: 1rem;
+  color: #212529;
+  border-collapse: collapse;
+}
+
+.orders-table th {
+  background-color: #343a40;
+  color: white;
+  padding: 0.75rem;
+  vertical-align: bottom;
+  border-bottom: 2px solid #dee2e6;
+  text-align: left;
+}
+
+.orders-table td {
+  padding: 0.75rem;
+  vertical-align: top;
+  border-top: 1px solid #dee2e6;
+}
+
+.orders-table tr:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* Búsqueda */
+.search-box {
+  margin-bottom: 20px;
+}
+
+.search-box .input-group {
+  max-width: 500px;
+}
+
+/* Paginación */
+.pagination {
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.page-item.active .page-link {
+  background-color: #343a40;
+  border-color: #343a40;
+}
+
+.page-link {
+  color: #343a40;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stats-card {
+    margin-bottom: 15px;
+  }
+
+  .orders-table th,
+  .orders-table td {
+    padding: 0.5rem;
+  }
+
+  .admin-container {
+    padding: 0 10px;
+  }
+}
+
+/* Mensajes de alerta */
+.alert {
+  border-radius: 0.25rem;
+  margin-bottom: 1rem;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+  color: #155724;
+}
+
+.alert-danger {
+  background-color: #f8d7da;
+  border-color: #f5c6cb;
+  color: #721c24;
+}

@@ -1,153 +1,101 @@
+/* Variables de color */
+:root {
+  --primary-color: #0d6efd;
+  --secondary-color: #6c757d;
+  --dark-color: #212529;
+  --light-color: #f8f9fa;
+  --success-color: #198754;
+  --warning-color: #ffc107;
+  --danger-color: #dc3545;
+  --border-radius: 0.5rem;
+  --box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+}
+
 /* Estilos generales */
 body {
-  background-color: #fff;
-  color: #000;
-  font-family: Arial, sans-serif;
-  margin: 0;
-  padding: 0;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f8f9fa;
+  color: var(--dark-color);
+  line-height: 1.6;
 }
 
-a {
-  text-decoration: none;
-  color: #000;
+.navbar.bg-black {
+  background-color: #000 !important;
+  padding-top: 0.5rem; /* Reduce el padding superior */
+  padding-bottom: 0.5rem; /* Reduce el padding inferior */
 }
 
-a:hover {
-  color: #666;
+.navbar-dark .navbar-brand,
+.navbar-dark .nav-link {
+  color: white !important;
 }
 
-/* Estilos de la cabecera */
-header {
-  background-color: #000;
-  color: #fff;
+.navbar-dark .navbar-brand {
+  font-size: 1.25rem; /* Tamaño del logo/brand */
 }
 
-.navbar {
-  margin-bottom: 20px;
+.navbar-dark .nav-link {
+  font-size: 0.9rem; /* Tamaño de los enlaces */
+  padding: 0.5rem 1rem; /* Ajusta el padding de los enlaces */
 }
 
-.navbar-brand,
-.navbar-nav .nav-link {
-  color: #fff !important;
-}
-
-.navbar-nav .nav-link:hover {
-  color: #ddd !important;
-}
-
-/* Estilos de la tabla */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 20px;
-}
-
-table th,
-table td {
-  padding: 10px;
-  text-align: left;
-  border: 1px solid #000;
-}
-
-table th {
-  background-color: #000;
-  color: #fff;
-}
-
-table td {
-  background-color: #fff;
-}
-
-/* Estilos para el carrito */
-table tr td[colspan="5"] {
-  color: #888;
-  font-style: italic;
-}
-
-/* Estilo de los botones */
-button {
-  background-color: #000;
-  color: #fff;
-  padding: 5px 10px;
-  border: none;
-  cursor: pointer;
-  border-radius: 5px;
-}
-
-button:hover {
-  background-color: #333;
-}
-
-/* Estilo de los badges */
-.badge {
-  font-size: 0.8rem;
-  background-color: #000;
-  color: #fff;
-  padding: 5px;
-  border-radius: 50%;
-  position: absolute;
-  top: 0;
-  right: 0;
-}
-
-/* Estilo del total */
-#total {
+.navbar-dark .nav-link.active {
   font-weight: bold;
-  color: #000;
 }
 
-/* Contenedor de pagos */
-.payment-container {
-  margin-top: 20px;
-  text-align: center;
+/* Opcional: ajustar el tamaño del contenedor si es necesario */
+.navbar > .container {
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
-.payment-container form {
-  display: inline-block;
-  margin: 10px;
+/* Contenido principal */
+.container {
+  padding-top: 2rem;
+  padding-bottom: 3rem;
 }
 
-.payment-container button {
-  background-color: #000;
-  color: #fff;
-  padding: 10px 15px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
+.page-title {
+  font-weight: 600;
+  color: var(--dark-color);
+  margin-bottom: 0;
 }
 
-.payment-container button:hover {
-  background-color: #333;
+/* Tabla de carrito */
+.cart-table {
+  background-color: white;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  box-shadow: var(--box-shadow);
 }
 
-/* Estilos de los enlaces en el carrito */
-table tr td {
-  text-align: center;
+.cart-table thead {
+  background-color: var(--dark-color);
+  color: white;
 }
 
-/* Estilos para el mensaje de carrito vacío */
-table tr td[colspan="5"] {
-  color: #888;
-  font-style: italic;
+.cart-table th {
+  font-weight: 500;
+  padding: 1rem;
 }
 
-/* Estilos del carrito vacío */
-.payment-container button,
-button.eliminar-btn {
-  background-color: #000;
-  color: #fff;
+.cart-table td {
+  padding: 1rem;
+  vertical-align: middle;
 }
 
-.payment-container button:hover,
-button.eliminar-btn:hover {
-  background-color: #333;
+.product-image {
+  width: 80px;
+  height: 80px;
+  object-fit: contain; /* Mantiene la proporción sin recortar */
+  border-radius: 4px;
+  border: 1px solid #eee;
 }
 
-/* Ajustes de color de enlaces */
-a {
-  color: #000;
-}
-
-a:hover {
-  color: #666;
+/* Para pantallas pequeñas */
+@media (max-width: 576px) {
+  .product-image {
+    width: 60px;
+    height: 60px;
+  }
 }

@@ -1,51 +1,85 @@
 <?php
-session_start();
-$mysqli = new mysqli("localhost", "root", "", "elecstore");
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+session_start();
+
+// Configuración de la base de datos
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');
+define('DB_PASS', '');
+define('DB_NAME', 'elecstore');
+require 'vendor/autoload.php'; // Para PHPMailer y FPDF
+
+// Conexión a la base de datos
+$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 if ($mysqli->connect_error) {
     die("Error de conexión: " . $mysqli->connect_error);
 }
 
+// Verificar autenticación
 if (!isset($_SESSION['usuario_id'])) {
     header("Location: login.php");
     exit;
 }
 
+// Obtener datos del usuario
 $usuario_id = $_SESSION['usuario_id'];
+$query_usuario = "SELECT nombre, email FROM usuarios WHERE id = ?";
+$stmt_usuario = $mysqli->prepare($query_usuario);
+$stmt_usuario->bind_param("i", $usuario_id);
+$stmt_usuario->execute();
+$usuario = $stmt_usuario->get_result()->fetch_assoc();
+$stmt_usuario->close();
 
-if (isset($_GET['orderID'])) {
-    $order_id = $_GET['orderID'];
+// Verificar si se recibió el orderID de PayPal
+if (!isset($_GET['orderID'])) {
+    die("Error: No se recibió el ID de la orden de PayPal");
+}
 
-    $query = "
-        SELECT 
-            c.id AS carrito_id,
-            p.id AS producto_id,
-            p.nombre, 
-            p.precio, 
-            c.cantidad, 
-            p.ruta_imagen
-        FROM carrito c
-        INNER JOIN productos p ON c.producto_id = p.id
-        WHERE c.usuario_id = ?";
-    $stmt = $mysqli->prepare($query);
-    $stmt->bind_param("i", $usuario_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
+// Obtener productos del carrito
+$query_carrito = "SELECT c.id, p.id AS producto_id, p.nombre, p.precio, c.cantidad, 
+                 p.ruta_imagen, p.existencia FROM carrito c
+                 JOIN productos p ON c.producto_id = p.id
+                 WHERE c.usuario_id = ?";
+$stmt_carrito = $mysqli->prepare($query_carrito);
+$stmt_carrito->bind_param("i", $usuario_id);
+$stmt_carrito->execute();
+$productos = $stmt_carrito->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt_carrito->close();
 
-    $productos = [];
-    $total = 0;
-    while ($row = $result->fetch_assoc()) {
-        $productos[] = $row;
-        $total += $row['precio'] * $row['cantidad'];
+if (empty($productos)) {
+    die("Error: Carrito vacío");
+}
+
+// Calcular total y verificar stock
+$total = 0;
+foreach ($productos as $producto) {
+    if ($producto['cantidad'] > $producto['existencia']) {
+        die("No hay suficiente stock para: " . $producto['nombre']);
     }
+    $total += $producto['precio'] * $producto['cantidad'];
+}
 
+// Generar ID único para nuestra orden
+$orden_id = "PP_" . date('Ymd_His') . "_" . uniqid();
+
+// Iniciar transacción
+$mysqli->begin_transaction();
+
+try {
+    // 1. Registrar la compra en la base de datos
     foreach ($productos as $producto) {
-        $insert_producto_query = "INSERT INTO compras (usuario_id, producto_id, nombre_producto, imagen_producto, precio, cantidad, total, order_id, estado_pago)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pagado')";
-        $stmt_producto = $mysqli->prepare($insert_producto_query);
         $total_producto = $producto['precio'] * $producto['cantidad'];
+        $insert_query = "INSERT INTO compras (
+            usuario_id, producto_id, nombre_producto, imagen_producto,
+            precio, cantidad, total, order_id, estado_pago, fecha, escaneado
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pagado', NOW(), 0)";
 
-        $stmt_producto->bind_param(
+        $stmt = $mysqli->prepare($insert_query);
+        $stmt->bind_param(
             "iissdiis",
             $usuario_id,
             $producto['producto_id'],
@@ -54,143 +88,146 @@ if (isset($_GET['orderID'])) {
             $producto['precio'],
             $producto['cantidad'],
             $total_producto,
-            $order_id
+            $orden_id
         );
-        $stmt_producto->execute();
-        $stmt_producto->close();
+        $stmt->execute();
+        $stmt->close();
+
+        // Actualizar existencias
+        $update_query = "UPDATE productos SET existencia = existencia - ? WHERE id = ?";
+        $stmt = $mysqli->prepare($update_query);
+        $stmt->bind_param("ii", $producto['cantidad'], $producto['producto_id']);
+        $stmt->execute();
+        $stmt->close();
     }
 
+    // 2. Vaciar carrito
     $delete_query = "DELETE FROM carrito WHERE usuario_id = ?";
-    $stmt_delete = $mysqli->prepare($delete_query);
-    $stmt_delete->bind_param("i", $usuario_id);
-    $stmt_delete->execute();
-    $stmt_delete->close();
+    $stmt = $mysqli->prepare($delete_query);
+    $stmt->bind_param("i", $usuario_id);
+    $stmt->execute();
+    $stmt->close();
 
-    // Crear el PDF del recibo
-    define('FPDF_FONTPATH', 'lib/font');
-    require('lib/fpdf.php');
+    // 3. Generar QR Code usando tu script Python
+    $qr_script_path = 'C:\\xampp\\htdocs\\elecstore\\qrCode.py';
+    $command = escapeshellcmd("python $qr_script_path $usuario_id $orden_id {$usuario['email']}");
+    $qr_path = shell_exec($command);
+    $qr_path = trim($qr_path); // Eliminar espacios/newlines
+
+    if (!file_exists($qr_path)) {
+        throw new Exception("No se pudo generar el código QR en: $qr_path");
+    }
+
+    // 4. Generar Recibo PDF
+    $recibos_dir = __DIR__ . '/recibos';
+    if (!file_exists($recibos_dir)) {
+        mkdir($recibos_dir, 0755, true);
+    }
+
     $pdf = new FPDF();
     $pdf->AddPage();
 
-    date_default_timezone_set('America/Mexico_City');
-    $pdf->SetFont('Arial', 'B', 18);
-    $pdf->Cell(200, 10, 'Comprobante de Pago', 0, 1, 'C');
-    $pdf->Ln(15);
-    $pdf->SetFont('Arial', '', 12);
-    $pdf->Cell(100, 10, 'Fecha: ' . date('Y-m-d H:i:s'));
+    // Encabezado
+    $pdf->SetFont('Arial', 'B', 16);
+    $pdf->Cell(0, 10, 'RECIBO DE PAGO', 0, 1, 'C');
     $pdf->Ln(10);
-    $pdf->Cell(100, 10, 'ID de Orden: ' . $order_id);
-    $pdf->Ln(15);
+
+    // Datos del cliente
+    $pdf->SetFont('Arial', '', 12);
+    $pdf->Cell(0, 10, 'Cliente: ' . $usuario['nombre'], 0, 1);
+    $pdf->Cell(0, 10, 'Fecha: ' . date('d/m/Y H:i:s'), 0, 1);
+    $pdf->Cell(0, 10, 'Orden #: ' . $orden_id, 0, 1);
+    $pdf->Ln(10);
+
+    // Tabla de productos
     $pdf->SetFont('Arial', 'B', 12);
-    $pdf->Cell(50, 10, 'Producto', 1, 0, 'C');
+    $pdf->Cell(100, 10, 'Producto', 1, 0, 'C');
     $pdf->Cell(30, 10, 'Cantidad', 1, 0, 'C');
-    $pdf->Cell(40, 10, 'Precio Unitario', 1, 0, 'C');
-    $pdf->Cell(40, 10, 'Total', 1, 1, 'C');
-    $pdf->SetFont('Arial', '', 12);
+    $pdf->Cell(30, 10, 'P. Unitario', 1, 0, 'C');
+    $pdf->Cell(30, 10, 'Total', 1, 1, 'C');
 
+    $pdf->SetFont('Arial', '', 10);
     foreach ($productos as $producto) {
-        $pdf->Cell(50, 10, $producto['nombre'], 1, 0, 'L');
+        $pdf->Cell(100, 10, substr($producto['nombre'], 0, 40), 1);
         $pdf->Cell(30, 10, $producto['cantidad'], 1, 0, 'C');
-        $pdf->Cell(40, 10, '$' . number_format($producto['precio'], 2), 1, 0, 'C');
-        $pdf->Cell(40, 10, '$' . number_format($producto['precio'] * $producto['cantidad'], 2), 1, 1, 'C');
+        $pdf->Cell(30, 10, '$' . number_format($producto['precio'], 2), 1, 0, 'R');
+        $pdf->Cell(30, 10, '$' . number_format($producto['precio'] * $producto['cantidad'], 2), 1, 1, 'R');
     }
 
-    $pdf->Ln(10);
+    // Total
     $pdf->SetFont('Arial', 'B', 12);
-    $pdf->Cell(120, 10, 'Total a pagar', 0, 0);
-    $pdf->Cell(40, 10, '$' . number_format($total, 2), 1, 1, 'C');
+    $pdf->Cell(160, 10, 'Total:', 1, 0, 'R');
+    $pdf->Cell(30, 10, '$' . number_format($total, 2), 1, 1, 'R');
 
-    $pdf_filename = __DIR__ . "/recibos/recibo_" . $orden_id . ".pdf";
-    $pdf->Output('F', 'recibos/' . $pdf_filename);
+    // Código QR
+    $pdf->Ln(10);
+    $pdf->Cell(0, 10, 'Codigo QR para referencia:', 0, 1);
+    $pdf->Image($qr_path, 60, $pdf->GetY(), 80);
 
-    // Obtener correo del cliente
-    $stmt = $mysqli->prepare("SELECT email FROM usuarios WHERE id = ?");
-    $stmt->bind_param("i", $usuario_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $email_cliente = $result->fetch_assoc()['email'];
-    $stmt->close();
+    // Guardar PDF
+    $pdf_path = $recibos_dir . '/recibo_' . $orden_id . '.pdf';
+    $pdf->Output('F', $pdf_path);
 
-    // Generar QR con Python
-    $cmd = "C:\\Python313\\python.exe C:\\xampp\\htdocs\\elecstore\\qrCode.py $usuario_id $orden_id $email_cliente";
-    $descriptorspec = array(
-        0 => array("pipe", "r"),  // STDIN
-        1 => array("pipe", "w"),  // STDOUT
-        2 => array("pipe", "w")   // STDERR
-    );
+    // 5. Enviar correo electrónico con recibo y QR
+    $mail = new PHPMailer(true);
+    try {
+        // Configuración SMTP
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com';
+        $mail->SMTPAuth = true;
+        $mail->Username = 'elecstoreceti@gmail.com';
+        $mail->Password = 'dipx bojn iywk flff';
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+        $mail->Port = 465;
 
-    $process = proc_open($cmd, $descriptorspec, $pipes);
+        // Remitente y destinatario
+        $mail->setFrom('elecstoreceti@gmail.com', 'Elecstore');
+        $mail->addAddress($usuario['email'], $usuario['nombre']);
 
-    if (is_resource($process)) {
-        fclose($pipes[0]); // No escribimos en stdin
+        // Contenido del correo
+        $mail->isHTML(true);
+        $mail->Subject = 'Recibo de compra #' . $orden_id;
+        $mail->Body = "
+            <h2 style='color: #0066cc;'>¡Gracias por tu compra!</h2>
+            <p>Hola {$usuario['nombre']},</p>
+            <p>Tu pago ha sido procesado exitosamente. Adjuntamos tu recibo y código QR para referencia.</p>
+            
+            <h3>Detalles de la compra:</h3>
+            <p><strong>Orden #:</strong> {$orden_id}</p>
+            <p><strong>Fecha:</strong> " . date('d/m/Y H:i:s') . "</p>
+            <p><strong>Total:</strong> $" . number_format($total, 2) . " MXN</p>
+            <p><strong>Estado:</strong> Pagado (pendiente de escaneo)</p>
+            
+            <p>Guarda este correo como comprobante de tu compra.</p>
+            <p>Gracias por tu preferencia,</p>
+            <p><strong>Equipo ELECSTORE</strong></p>
+        ";
 
-        $stdout = stream_get_contents($pipes[1]);
-        fclose($pipes[1]);
+        $mail->AltBody = "Recibo de compra\n\nOrden: {$orden_id}\nFecha: " . date('d/m/Y H:i:s') .
+            "\nTotal: $" . number_format($total, 2) . " MXN\nEstado: Pagado (pendiente de escaneo)\n\nGracias por tu compra.";
 
-        $stderr = stream_get_contents($pipes[2]);
-        fclose($pipes[2]);
+        // Adjuntar archivos
+        $mail->addAttachment($pdf_path, 'Recibo_' . $orden_id . '.pdf');
+        $mail->addAttachment($qr_path, 'CodigoQR_' . $orden_id . '.png');
 
-        $exitCode = proc_close($process);
-
-        if ($exitCode !== 0 || !$stdout) {
-            throw new Exception("Error al generar el QR. Comando: $cmd\nError: $stderr\nSalida: $stdout");
-        }
-
-        $qr_path = trim($stdout);
-
-        if (!file_exists($qr_path)) {
-            throw new Exception("El archivo QR no fue encontrado. Ruta esperada: $qr_path");
-        }
-    } else {
-        throw new Exception("No se pudo iniciar el proceso de generación del código QR.");
+        // Enviar correo
+        $mail->send();
+    } catch (Exception $e) {
+        error_log("Error al enviar correo: " . $e->getMessage());
     }
 
+    // Confirmar transacción
+    $mysqli->commit();
 
-    // Enviar correo
-    require_once __DIR__ . '/vendor/phpmailer/phpmailer/src/PHPMailer.php';
-    require_once __DIR__ . '/vendor/phpmailer/phpmailer/src/SMTP.php';
-    require_once __DIR__ . '/vendor/phpmailer/phpmailer/src/Exception.php';
-    require_once __DIR__ . '/vendor/autoload.php';
+    // Actualizar sesión
+    $_SESSION['carrito_cantidad'] = 0;
 
-    // Obtener el correo del cliente
-    $stmt = $mysqli->prepare("SELECT email FROM usuarios WHERE id = ?");
-    $stmt->bind_param("i", $usuario_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $email_cliente = $result->fetch_assoc()['email'];
-    $stmt->close();
-
-    // Validar correo con expresión regular
-    $patron = '/^(a\d{8}@ceti\.mx|a\d{8}@live\.ceti\.mx)$/';
-
-    if (!preg_match($patron, $email_cliente)) {
-        throw new Exception("Correo inválido: $email_cliente");
-    }
-
-    // Si el correo es válido, continuamos con el proceso de envío de correo
-    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
-
-    // Configuración de PHPMailer
-    $mail->isSMTP();
-    $mail->Host = 'smtp.gmail.com';
-    $mail->SMTPAuth = true;
-    $mail->Username = 'elecstoreceti@gmail.com';
-    $mail->Password = 'cpqv ikfr xtnf omrn';
-    $mail->SMTPSecure = 'ssl';  // O usa 'ssl' si es necesario
-    $mail->Port = 465;
-
-    $mail->setFrom('elecstoreceti@gmail.com', 'Elecstore');
-    $mail->addAddress($email_cliente);  // El correo validado del cliente
-    $mail->Subject = "Código QR y recibo de tu compra";
-    $mail->Body = "Gracias por tu compra. Adjuntamos tu código QR y el recibo en PDF.";
-
-    // Adjuntar los archivos (QR y PDF)
-    $mail->addAttachment(trim($qr_path));  // Ruta del archivo QR
-    $mail->addAttachment($pdf_filename);   // Ruta del archivo PDF
-
-    // Enviar el correo
-    $mail->send();
-
-    $_SESSION['mensaje_qr'] = "¡Tu compra ha sido registrada! Te enviamos el QR y el recibo por correo.";
+    // Redirigir a página de confirmación
+    header("Location: confirmacion_pago.php?order_id=" . urlencode($orden_id));
+    exit;
+} catch (Exception $e) {
+    $mysqli->rollback();
+    die("Error al procesar el pago: " . $e->getMessage());
 }
+
 $mysqli->close();

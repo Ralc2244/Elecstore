@@ -1,8 +1,0 @@
-Comando:
-C:\Python313\python.exe C:\xampp\htdocs\elecstore\qrCode.py 6 ORD_6806abcb1ad40 a21100265@ceti.mx 2>&1
-
-Salida:
-Traceback (most recent call last):
-  File "C:\xampp\htdocs\elecstore\qrCode.py", line 2, in <module>
-    import qrcode
-ModuleNotFoundError: No module named 'qrcode'

@@ -1,14 +1,15 @@
 <?php
-session_start(); // Inicia sesión
+session_start();
+header('Content-Type: application/json'); // Añade esta línea
 
-// Conexión a la base de datos
 $mysqli = new mysqli("localhost", "root", "", "elecstore");
 if ($mysqli->connect_error) {
-    die("Error de conexión: " . $mysqli->connect_error);
+    echo json_encode(['success' => false, 'error' => 'Error de conexión a la base de datos']);
+    exit;
 }
 
-// Verifica si el usuario está autenticado
 if (!isset($_SESSION['usuario_id'])) {
+    echo json_encode(['success' => false, 'error' => 'Usuario no autenticado']);
     exit;
 }
 
@@ -16,12 +17,12 @@ $usuario_id = $_SESSION['usuario_id'];
 $producto_id = isset($_POST['producto_id']) ? (int)$_POST['producto_id'] : 0;
 $cantidad = isset($_POST['cantidad']) ? (int)$_POST['cantidad'] : 0;
 
-// Validación de entradas
 if ($producto_id <= 0 || $cantidad <= 0) {
+    echo json_encode(['success' => false, 'error' => 'Datos inválidos']);
     exit;
 }
 
-// Verificar la existencia del producto
+// Verificar existencia del producto
 $stmt = $mysqli->prepare("SELECT existencia FROM productos WHERE id = ?");
 $stmt->bind_param("i", $producto_id);
 $stmt->execute();
@@ -30,6 +31,7 @@ $stmt->fetch();
 $stmt->close();
 
 if ($cantidad > $existencia) {
+    echo json_encode(['success' => false, 'error' => 'No hay suficiente stock']);
     exit;
 }
 
@@ -42,28 +44,30 @@ $stmt->fetch();
 $stmt->close();
 
 if ($cantidad_actual) {
-    // Si ya existe en el carrito, actualizar cantidad
     $nueva_cantidad = $cantidad_actual + $cantidad;
     $stmt = $mysqli->prepare("UPDATE carrito SET cantidad = ? WHERE usuario_id = ? AND producto_id = ?");
     $stmt->bind_param("iii", $nueva_cantidad, $usuario_id, $producto_id);
 } else {
-    // Insertar nuevo producto en el carrito
     $stmt = $mysqli->prepare("INSERT INTO carrito (usuario_id, producto_id, cantidad) VALUES (?, ?, ?)");
     $stmt->bind_param("iii", $usuario_id, $producto_id, $cantidad);
 }
 
-// Ejecutar la consulta
 if ($stmt->execute()) {
-    // Restar cantidad del inventario
+    // Restar del inventario
     $stmt = $mysqli->prepare("UPDATE productos SET existencia = existencia - ? WHERE id = ?");
     $stmt->bind_param("ii", $cantidad, $producto_id);
     $stmt->execute();
 
-    // Actualizar la cantidad total de productos en la sesión
+    // Actualizar sesión
     $_SESSION['carrito_cantidad'] = isset($_SESSION['carrito_cantidad']) ? $_SESSION['carrito_cantidad'] + $cantidad : $cantidad;
+
+    echo json_encode([
+        'success' => true,
+        'nueva_cantidad' => $_SESSION['carrito_cantidad']
+    ]);
+} else {
+    echo json_encode(['success' => false, 'error' => 'Error al actualizar carrito']);
 }
 
-// Cerrar conexiones
 $stmt->close();
 $mysqli->close();
-?>
