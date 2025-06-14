@@ -1,7 +1,8 @@
 <?php
 session_start();
-$mysqli = new mysqli("localhost", "root", "", "elecstore");
 
+// Configuración de la base de datos
+$mysqli = new mysqli("sql308.infinityfree.com", "if0_39096654", "D6PMCsfj39K", "if0_39096654_elecstore");
 if ($mysqli->connect_error) {
     die("Error de conexión: " . $mysqli->connect_error);
 }
@@ -12,27 +13,105 @@ if (!isset($_SESSION['usuario_id'])) {
     exit;
 }
 
+// 1. Primero verificamos y limpiamos el carrito expirado para este usuario
+$usuario_id = $_SESSION['usuario_id'];
+
+// Verificar y obtener los productos del carrito expirado (más de 2 minutos)
+$query_verificar = "SELECT 
+    c.id AS carrito_id,
+    c.producto_id,
+    c.cantidad,
+    p.nombre
+FROM 
+    carrito c
+JOIN 
+    productos p ON c.producto_id = p.id
+WHERE 
+    c.usuario_id = ? AND 
+    c.ultima_actualizacion < DATE_SUB(NOW(), INTERVAL 2 MINUTE)";
+$stmt = $mysqli->prepare($query_verificar);
+$stmt->bind_param("i", $usuario_id);
+$stmt->execute();
+$carrito_expirado = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+if (!empty($carrito_expirado)) {
+    // Iniciar transacción para asegurar la integridad de los datos
+    $mysqli->begin_transaction();
+
+    try {
+        // 1. Reponer el stock de cada producto
+        foreach ($carrito_expirado as $item) {
+            $query_reponer = "UPDATE productos 
+                            SET existencia = existencia + ? 
+                            WHERE id = ?";
+            $stmt = $mysqli->prepare($query_reponer);
+            $stmt->bind_param("ii", $item['cantidad'], $item['producto_id']);
+            $stmt->execute();
+            $stmt->close();
+        }
+
+        // 2. Limpiar el carrito expirado
+        $query_limpiar = "DELETE FROM carrito WHERE usuario_id = ?";
+        $stmt = $mysqli->prepare($query_limpiar);
+        $stmt->bind_param("i", $usuario_id);
+        $stmt->execute();
+        $stmt->close();
+
+        $mysqli->commit();
+
+        // Actualizar sesión
+        $_SESSION['carrito_cantidad'] = 0;
+
+        // Mostrar mensaje al usuario con lista de productos repuestos
+        $productos_repuestos = array_map(function ($item) {
+            return $item['nombre'] . " (Cantidad: " . $item['cantidad'] . ")";
+        }, $carrito_expirado);
+
+        $_SESSION['mensaje_carrito'] = "Tu carrito ha sido vaciado automáticamente por inactividad. Se repuso el stock de: " .
+            implode(", ", $productos_repuestos);
+    } catch (Exception $e) {
+        $mysqli->rollback();
+        error_log("Error al limpiar carrito: " . $e->getMessage());
+        $_SESSION['error_carrito'] = "Ocurrió un error al procesar tu carrito. Por favor intenta nuevamente.";
+    }
+}
+
+// 2. Procesamiento normal del carrito (tu código original)
 // Cuando se agrega un producto al carrito
 if (isset($_POST['agregar_carrito'])) {
     $producto_id = $_POST['producto_id'];
     $cantidad = $_POST['cantidad'];
 
-    // Reducir el stock
-    $mysqli->query("UPDATE productos SET stock = stock - $cantidad WHERE id = $producto_id");
+    // Verificar disponibilidad de stock primero
+    $query_stock = "SELECT existencia FROM productos WHERE id = ?";
+    $stmt = $mysqli->prepare($query_stock);
+    $stmt->bind_param("i", $producto_id);
+    $stmt->execute();
+    $stock = $stmt->get_result()->fetch_assoc()['existencia'];
+    $stmt->close();
 
-    // Otros procesos para agregar el producto al carrito...
+    if ($stock >= $cantidad) {
+        // Actualizar el timestamp del carrito
+        $query_actualizar = "UPDATE carrito SET ultima_actualizacion = NOW() WHERE usuario_id = ?";
+        $stmt = $mysqli->prepare($query_actualizar);
+        $stmt->bind_param("i", $usuario_id);
+        $stmt->execute();
+        $stmt->close();
+    } else {
+        $_SESSION['error_carrito'] = "No hay suficiente stock para el producto seleccionado.";
+    }
 }
 
-$usuario_id = $_SESSION['usuario_id'];
-
-// Obtener productos del carrito
+// Obtener productos del carrito actual
 $query = "SELECT 
     c.id AS carrito_id,
     p.id AS producto_id,
     p.nombre, 
     p.precio, 
     c.cantidad,
-    p.ruta_imagen
+    p.ruta_imagen,
+    p.existencia
 FROM 
     carrito c
 INNER JOIN 
@@ -47,6 +126,29 @@ $stmt->execute();
 $result = $stmt->get_result();
 $carrito = $result->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
+
+// Verificar stock actual y eliminar productos sin stock suficiente
+foreach ($carrito as $key => $item) {
+    if ($item['cantidad'] > $item['existencia']) {
+        // Eliminar producto sin stock suficiente
+        $query_eliminar = "DELETE FROM carrito WHERE id = ?";
+        $stmt = $mysqli->prepare($query_eliminar);
+        $stmt->bind_param("i", $item['carrito_id']);
+        $stmt->execute();
+        $stmt->close();
+
+        unset($carrito[$key]);
+
+        // Reponer el stock (en caso de que haya habido un cambio)
+        $query_reponer = "UPDATE productos SET existencia = existencia + ? WHERE id = ?";
+        $stmt = $mysqli->prepare($query_reponer);
+        $stmt->bind_param("ii", $item['cantidad'], $item['producto_id']);
+        $stmt->execute();
+        $stmt->close();
+
+        $_SESSION['error_carrito'] = "Algunos productos fueron eliminados de tu carrito por falta de stock.";
+    }
+}
 
 // Agrupar los productos por producto_id y sumar las cantidades
 $carrito_grouped = [];
@@ -154,6 +256,14 @@ $mysqli->close();
                 <i class="fas fa-arrow-left me-2"></i>Seguir comprando
             </a>
         </div>
+
+        <?php if (isset($_SESSION['mensaje_carrito'])): ?>
+            <div class="alert alert-warning alert-dismissible fade show mb-0" role="alert">
+                <?= $_SESSION['mensaje_carrito'] ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <?php unset($_SESSION['mensaje_carrito']); ?>
+        <?php endif; ?>
 
         <?php if (!empty($carrito_grouped)): ?>
             <div class="table-responsive">

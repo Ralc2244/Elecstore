@@ -1,12 +1,11 @@
 <?php
 
 use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
 session_start();
-$mysqli = new mysqli("localhost", "root", "", "elecstore");
 
+$mysqli = new mysqli("sql308.infinityfree.com", "if0_39096654", "D6PMCsfj39K", "if0_39096654_elecstore");
 if ($mysqli->connect_error) {
     die("Error de conexión: " . $mysqli->connect_error);
 }
@@ -15,10 +14,6 @@ if (!isset($_SESSION['usuario_id'])) {
     header("Location: login.php");
     exit;
 }
-
-// Configuración
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 
 // Directorios
 $recibos_dir = __DIR__ . '/recibos';
@@ -31,7 +26,7 @@ foreach ([$recibos_dir, $qr_dir] as $dir) {
     }
 }
 
-// Obtener información del usuario
+// Obtener info usuario
 $usuario_id = $_SESSION['usuario_id'];
 $query_usuario = "SELECT nombre, email FROM usuarios WHERE id = ?";
 $stmt_usuario = $mysqli->prepare($query_usuario);
@@ -41,17 +36,12 @@ $usuario = $stmt_usuario->get_result()->fetch_assoc();
 $stmt_usuario->close();
 
 // Verificar carrito
-$query_carrito = "SELECT c.id, p.id AS producto_id, p.nombre, p.precio, c.cantidad, 
-                 p.ruta_imagen, p.existencia FROM carrito c
-                 JOIN productos p ON c.producto_id = p.id
-                 WHERE c.usuario_id = ?";
+$query_carrito = "SELECT c.id, p.id AS producto_id, p.nombre, p.precio, c.cantidad, p.ruta_imagen, p.existencia FROM carrito c JOIN productos p ON c.producto_id = p.id WHERE c.usuario_id = ?";
 $stmt_carrito = $mysqli->prepare($query_carrito);
 $stmt_carrito->bind_param("i", $usuario_id);
-
 if (!$stmt_carrito->execute()) {
     die("Error al obtener carrito: " . $stmt_carrito->error);
 }
-
 $productos = $stmt_carrito->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt_carrito->close();
 
@@ -61,7 +51,7 @@ if (empty($productos)) {
     exit;
 }
 
-// Verificar stock y calcular total
+// Verificar stock y total
 $total = 0;
 foreach ($productos as $producto) {
     if ($producto['cantidad'] > $producto['existencia']) {
@@ -72,14 +62,35 @@ foreach ($productos as $producto) {
     $total += $producto['precio'] * $producto['cantidad'];
 }
 
-// Generar ID único para la orden
+// Generar orden_id único
 $orden_id = "EFEC_" . date('Ymd_His') . "_" . uniqid();
 
-// Iniciar transacción
+// Función para generar QR usando phpqrcode
+require_once __DIR__ . '/phpqrcode-2010100721_1.1.4/phpqrcode/qrlib.php';
+
+function generarCodigoQR($usuario_id, $orden_id, $email_cliente, $ruta_guardado)
+{
+    date_default_timezone_set('America/Mexico_City');
+
+    $fecha_actual = date("Y-m-d H:i:s");
+    $data = "ELECSTORE - Reserva\n";
+    $data .= "------------------------\n";
+    $data .= "Usuario ID: $usuario_id\n";
+    $data .= "Orden ID: $orden_id\n";
+    $data .= "Email: $email_cliente\n";
+    $data .= "Fecha: $fecha_actual\n";
+    $data .= "------------------------\n";
+    $data .= "Presentar este código en tienda";
+
+    QRcode::png($data, $ruta_guardado, 'H', 10, 4);
+
+    return $ruta_guardado;
+}
+
 $mysqli->begin_transaction();
 
 try {
-    // 1. Insertar compras con estado "Pendiente" y escaneado = 0
+    // Insertar compras y actualizar stock
     foreach ($productos as $producto) {
         $total_producto = $producto['precio'] * $producto['cantidad'];
         $insert_query = "INSERT INTO compras (
@@ -101,45 +112,30 @@ try {
         );
         $stmt->execute();
         $stmt->close();
-
-        // Reservar stock (disminuir existencia)
-        $update_query = "UPDATE productos SET existencia = existencia - ? WHERE id = ?";
-        $stmt = $mysqli->prepare($update_query);
-        $stmt->bind_param("ii", $producto['cantidad'], $producto['producto_id']);
-        $stmt->execute();
-        $stmt->close();
     }
 
-    // 2. Vaciar carrito
+    // Vaciar carrito
     $delete_query = "DELETE FROM carrito WHERE usuario_id = ?";
     $stmt = $mysqli->prepare($delete_query);
     $stmt->bind_param("i", $usuario_id);
     $stmt->execute();
     $stmt->close();
 
-    // 3. Generar QR Code
-    $qr_script_path = 'C:\\xampp\\htdocs\\elecstore\\qrCode.py';
-    $command = escapeshellcmd("python $qr_script_path $usuario_id $orden_id {$usuario['email']}");
-    $qr_path = shell_exec($command);
-    $qr_path = trim($qr_path);
+    // Generar QR en PHP
+    $qr_filename = $qr_dir . "/qr_{$orden_id}.png";
+    generarCodigoQR($usuario_id, $orden_id, $usuario['email'], $qr_filename);
 
-    if (!file_exists($qr_path)) {
-        throw new Exception("No se pudo generar el código QR en: $qr_path");
-    }
-
-    // 4. Generar PDF de reserva
+    // Generar PDF reserva
     require 'vendor/autoload.php';
     require __DIR__ . '/lib/fpdf.php';
 
     $pdf = new FPDF();
     $pdf->AddPage();
 
-    // Encabezado
     $pdf->SetFont('Arial', 'B', 18);
     $pdf->Cell(200, 10, 'Reserva de Productos', 0, 1, 'C');
     $pdf->Ln(10);
 
-    // Datos del cliente
     $pdf->SetFont('Arial', '', 12);
     $pdf->Cell(100, 10, 'Cliente: ' . $usuario['nombre']);
     $pdf->Ln(8);
@@ -148,7 +144,6 @@ try {
     $pdf->Cell(100, 10, 'ID de Reserva: ' . $orden_id);
     $pdf->Ln(15);
 
-    // Tabla de productos
     $pdf->SetFont('Arial', 'B', 12);
     $pdf->Cell(80, 10, 'Producto', 1, 0, 'C');
     $pdf->Cell(30, 10, 'Cantidad', 1, 0, 'C');
@@ -163,17 +158,15 @@ try {
         $pdf->Cell(40, 10, '$' . number_format($producto['precio'] * $producto['cantidad'], 2), 1, 1, 'C');
     }
 
-    // Total y QR
     $pdf->Ln(10);
     $pdf->SetFont('Arial', 'B', 12);
     $pdf->Cell(120, 10, 'Total a pagar en tienda:', 0, 0);
     $pdf->Cell(40, 10, '$' . number_format($total, 2), 1, 1, 'C');
     $pdf->Ln(10);
     $pdf->Cell(100, 10, 'Escanea este código QR en tienda:', 0, 1);
-    $pdf->Image($qr_path, 60, $pdf->GetY(), 80);
+    $pdf->Image($qr_filename, 60, $pdf->GetY(), 80);
     $pdf->Ln(90);
 
-    // Instrucciones
     $pdf->SetFont('Arial', 'B', 12);
     $pdf->MultiCell(0, 10, 'INSTRUCCIONES:', 0, 'L');
     $pdf->SetFont('Arial', '', 10);
@@ -181,12 +174,11 @@ try {
     $pdf->MultiCell(0, 7, '2. La reserva es válida por 96 horas (4 días) a partir de la fecha y hora mostrada.');
     $pdf->MultiCell(0, 7, '3. Al completar el pago en tienda, recibirás tu recibo fiscal por correo electrónico.');
 
-    // Guardar PDF
     $pdf_filename = 'reserva_' . $orden_id . '.pdf';
     $pdf_path = $recibos_dir . '/' . $pdf_filename;
     $pdf->Output('F', $pdf_path);
 
-    // 5. Enviar email de reserva
+    // Enviar email con PHPMailer
     $mail = new PHPMailer(true);
     try {
         $mail->isSMTP();
@@ -225,7 +217,7 @@ try {
             "\nTotal: $" . number_format($total, 2) . " MXN\nEstado: Pendiente de pago\n\n" .
             "Presenta el código QR en tienda para completar tu compra.";
 
-        $mail->addAttachment($qr_path, 'codigo_qr_' . $orden_id . '.png');
+        $mail->addAttachment($qr_filename, 'codigo_qr_' . $orden_id . '.png');
         $mail->addAttachment($pdf_path, 'reserva_' . $orden_id . '.pdf');
 
         $mail->send();
@@ -233,14 +225,11 @@ try {
         error_log("Error al enviar correo: " . $e->getMessage());
     }
 
-    // Confirmar transacción
     $mysqli->commit();
 
-    // Actualizar sesión
     $_SESSION['carrito_cantidad'] = 0;
     $_SESSION['mensaje_exito'] = "¡Reserva creada con éxito! Tu ID de reserva es: $orden_id";
 
-    // Redirigir a página de confirmación
     header("Location: confirmacion_reserva.php?orden_id=" . urlencode($orden_id));
     exit;
 } catch (Exception $e) {

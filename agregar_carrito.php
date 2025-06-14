@@ -1,11 +1,10 @@
 <?php
 session_start();
-header('Content-Type: application/json'); // Añade esta línea
+header('Content-Type: application/json');
 
-$mysqli = new mysqli("localhost", "root", "", "elecstore");
+$mysqli = new mysqli("sql308.infinityfree.com", "if0_39096654", "D6PMCsfj39K", "if0_39096654_elecstore");
 if ($mysqli->connect_error) {
-    echo json_encode(['success' => false, 'error' => 'Error de conexión a la base de datos']);
-    exit;
+    die("Error de conexión: " . $mysqli->connect_error);
 }
 
 if (!isset($_SESSION['usuario_id'])) {

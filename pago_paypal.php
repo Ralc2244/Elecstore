@@ -2,14 +2,11 @@
 session_start();
 
 // Configuración de la base de datos (todo en un archivo)
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'elecstore');
+$mysqli = new mysqli("sql308.infinityfree.com", "if0_39096654", "D6PMCsfj39K", "if0_39096654_elecstore");
+if ($mysqli->connect_error) {
+    die("Error de conexión: " . $mysqli->connect_error);
+}
 define('PAYPAL_CLIENT_ID', 'Abr-T4VBBcG9sSfmJjJNtrYoKdTdl8IruLl3HT4zj1jN83i-Ie3f-XX5AjldUs5favXsRiFSngrYUNk6');
-
-// Conexión a la base de datos
-$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
 if ($mysqli->connect_error) {
     die("<div class='alert alert-danger'>Error de conexión: " . $mysqli->connect_error . "</div>");

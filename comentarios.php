@@ -2,8 +2,8 @@
 session_start();
 require_once 'vendor/autoload.php'; // Para cargar la librería de NLP
 
-$mysqli = new mysqli("localhost", "root", "", "elecstore");
-
+// Configuración de la base de datos
+$mysqli = new mysqli("sql308.infinityfree.com", "if0_39096654", "D6PMCsfj39K", "if0_39096654_elecstore");
 if ($mysqli->connect_error) {
     die("Error de conexión: " . $mysqli->connect_error);
 }
@@ -18,47 +18,58 @@ $usuario_id = $_SESSION['usuario_id'];
 // Función para analizar sentimiento del comentario (implementación básica)
 function analizarSentimiento($comentario)
 {
-    $positive_words = ['bueno', 'excelente', 'recomiendo', 'genial', 'perfecto', 'maravilloso', 'fantástico', 'increíble', 'satisfecho'];
-    $negative_words = ['malo', 'horrible', 'pésimo', 'decepcionante', 'no recomiendo', 'defectuoso', 'terrible', 'devolución', 'insatisfecho', 'feo'];
+    $comentario = strtolower($comentario);
+
+    $frases_positivas = ['me encantó', 'muy bueno', 'lo recomiendo', 'vale la pena', 'excelente compra'];
+    $frases_negativas = ['muy malo', 'no sirve', 'pérdida de dinero', 'no lo recomiendo', 'me arrepiento'];
+
+    $palabras_positivas = ['bueno', 'excelente', 'genial', 'perfecto', 'satisfecho'];
+    $palabras_negativas = ['malo', 'horrible', 'defectuoso', 'decepcionante', 'insatisfecho'];
 
     $score = 0;
-    $words = preg_split('/\s+/', strtolower($comentario));
-    $total_words = count($words);
 
-    if ($total_words == 0) return ['sentimiento' => 'neutral', 'puntuacion' => 0];
-
-    foreach ($words as $word) {
-        if (in_array($word, $positive_words)) $score += 1;
-        if (in_array($word, $negative_words)) $score -= 1;
+    foreach ($frases_positivas as $frase) {
+        if (strpos($comentario, $frase) !== false) $score += 2;
     }
 
-    $normalized_score = $score / $total_words;
+    foreach ($frases_negativas as $frase) {
+        if (strpos($comentario, $frase) !== false) $score -= 2;
+    }
 
-    if ($normalized_score > 0.1) {
-        return ['sentimiento' => 'positivo', 'puntuacion' => $normalized_score];
-    } elseif ($normalized_score < -0.1) {
-        return ['sentimiento' => 'negativo', 'puntuacion' => $normalized_score];
+    $words = preg_split('/\s+/', $comentario);
+    foreach ($words as $word) {
+        if (in_array($word, $palabras_positivas)) $score += 1;
+        if (in_array($word, $palabras_negativas)) $score -= 1;
+    }
+
+    if ($score > 1) {
+        return ['sentimiento' => 'positivo', 'puntuacion' => $score];
+    } elseif ($score < -1) {
+        return ['sentimiento' => 'negativo', 'puntuacion' => $score];
     } else {
-        return ['sentimiento' => 'neutral', 'puntuacion' => $normalized_score];
+        return ['sentimiento' => 'neutral', 'puntuacion' => $score];
     }
 }
+
 
 // Función para actualizar la clasificación del producto
 function actualizarClasificacionProducto($mysqli, $producto_id)
 {
-    // Obtener estadísticas de comentarios
-    $stats = $mysqli->query("
+    $stmt = $mysqli->prepare("
         SELECT 
-            COUNT(*) as total,
-            SUM(sentimiento = 'positivo') as positivos,
-            SUM(sentimiento = 'negativo') as negativos,
-            SUM(sentimiento = 'neutral') as neutrales,
-            AVG(puntuacion) as promedio
+            COUNT(*) AS total,
+            SUM(sentimiento = 'positivo') AS positivos,
+            SUM(sentimiento = 'negativo') AS negativos,
+            SUM(sentimiento = 'neutral') AS neutrales,
+            AVG(puntuacion) AS promedio
         FROM comentarios 
-        WHERE producto_id = $producto_id
-    ")->fetch_assoc();
+        WHERE producto_id = ?
+    ");
+    $stmt->bind_param("i", $producto_id);
+    $stmt->execute();
+    $stats = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
 
-    // Determinar clasificación
     $clasificacion = 'Neutral';
     $estado = 'Disponible';
 
@@ -70,30 +81,31 @@ function actualizarClasificacionProducto($mysqli, $producto_id)
             $clasificacion = 'Recomendado';
         } elseif ($ratio_negativos > 0.5) {
             $clasificacion = 'No recomendado';
-
-            // Verificar si supera el umbral para marcado especial
             if ($ratio_negativos > 0.6 && $stats['total'] > 5) {
                 $estado = 'No recomendado';
-                // Notificar administradores
                 $mensaje = "El producto ID $producto_id ha recibido demasiados comentarios negativos (" . round($ratio_negativos * 100) . "%)";
-                $mysqli->query("INSERT INTO notificaciones (producto_id, tipo, mensaje) VALUES ($producto_id, 'alto_negativos', '$mensaje')");
+                $stmt = $mysqli->prepare("INSERT INTO notificaciones (producto_id, tipo, mensaje) VALUES (?, 'alto_negativos', ?)");
+                $stmt->bind_param("is", $producto_id, $mensaje);
+                $stmt->execute();
+                $stmt->close();
             }
         }
     }
 
-
-
-    // Actualizar producto
-    $mysqli->query("
+    $stmt = $mysqli->prepare("
         UPDATE productos 
         SET 
-            clasificacion = '$clasificacion',
-            estado = '$estado',
-            contador_positivos = {$stats['positivos']},
-            contador_negativos = {$stats['negativos']}
-        WHERE id = $producto_id
+            clasificacion = ?, 
+            estado = ?, 
+            contador_positivos = ?, 
+            contador_negativos = ?
+        WHERE id = ?
     ");
+    $stmt->bind_param("ssiii", $clasificacion, $estado, $stats['positivos'], $stats['negativos'], $producto_id);
+    $stmt->execute();
+    $stmt->close();
 }
+
 
 // Procesar el formulario de comentarios
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["producto_id"], $_POST["comentario"])) {

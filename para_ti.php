@@ -1,7 +1,6 @@
 <?php
 session_start();
-$mysqli = new mysqli("localhost", "root", "", "elecstore");
-
+$mysqli = new mysqli("sql308.infinityfree.com", "if0_39096654", "D6PMCsfj39K", "if0_39096654_elecstore");
 if ($mysqli->connect_error) {
     die("Error de conexión: " . $mysqli->connect_error);
 }
@@ -358,7 +357,7 @@ if ($categoria_seleccionada) {
                                         <p class="card-text text-muted"><?= substr(htmlspecialchars($producto['descripcion'] ?? ''), 0, 60) ?>...</p>
                                         <div class="d-flex justify-content-between align-items-center">
                                             <span class="h5">$<?= number_format($producto['precio'], 2) ?></span>
-                                            <a href="producto.php?id=<?= $producto['id'] ?>" class="btn btn-dark btn-sm">Ver detalles</a>
+                                            <a href="detalles.php?id=<?= $producto['id'] ?>" class="btn btn-dark btn-sm">Ver detalles</a>
                                         </div>
                                     </div>
                                 </div>
@@ -423,7 +422,7 @@ if ($categoria_seleccionada) {
                                                 <h5 class="card-title"><?= htmlspecialchars($producto['nombre']) ?></h5>
                                                 <div class="d-flex justify-content-between align-items-center">
                                                     <span class="h5">$<?= number_format($producto['precio'], 2) ?></span>
-                                                    <a href="producto.php?id=<?= $producto['id'] ?>" class="btn btn-dark btn-sm">Ver detalles</a>
+                                                    <a href="detalles.php?id=<?= $producto['id'] ?>" class="btn btn-dark btn-sm">Ver detalles</a>
                                                 </div>
                                             </div>
                                         </div>

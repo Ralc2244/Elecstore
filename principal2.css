@@ -125,3 +125,12 @@ header {
 .main-container {
   padding: 20px;
 }
+
+footer a {
+  text-decoration: none;
+  transition: opacity 0.3s;
+}
+footer a:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}

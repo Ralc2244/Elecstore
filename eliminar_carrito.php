@@ -1,9 +1,9 @@
 <?php
 session_start();
-$mysqli = new mysqli("localhost", "root", "", "elecstore");
-
+// Configuración de la base de datos
+$mysqli = new mysqli("sql308.infinityfree.com", "if0_39096654", "D6PMCsfj39K", "if0_39096654_elecstore");
 if ($mysqli->connect_error) {
-    die(json_encode(["success" => false, "error" => "Error de conexión"]));
+    die("Error de conexión: " . $mysqli->connect_error);
 }
 
 // Verifica si el usuario está autenticado
@@ -67,4 +67,3 @@ $_SESSION['carrito_cantidad'] = $nueva_cantidad ?: 0;
 
 echo json_encode(["success" => true, "nuevo_total" => number_format($nuevo_total, 2), "nueva_cantidad" => $nueva_cantidad ?: 0]);
 $mysqli->close();
-?>

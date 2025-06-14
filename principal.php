@@ -1,7 +1,6 @@
 <?php
 session_start();
-$mysqli = new mysqli("localhost", "root", "", "elecstore");
-
+$mysqli = new mysqli("sql308.infinityfree.com", "if0_39096654", "D6PMCsfj39K", "if0_39096654_elecstore");
 if ($mysqli->connect_error) {
     die("Error de conexión: " . $mysqli->connect_error);
 }
@@ -245,6 +244,26 @@ $mysqli->close();
             }, 5000);
         });
     </script>
+    <!-- Footer con créditos -->
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <h5>Créditos de imágenes</h5>
+                    <p class="small mb-0">Las imágenes utilizadas en este sitio son propiedad de sus respectivos dueños.</p>
+                    <p class="small mb-0">Algunas imágenes provienen de <a href="https://www.shutterstock.com/" class="text-white" target="_blank">Shutterstock</a> y <a href="https://intesc.mx/" class="text-white" target="_blank">Intesc</a>.</p>
+                    <p class="small">Si eres propietario de alguna imagen y deseas que sea removida, por favor <a href="elecstoreceti@gmail.com" class="text-white">contáctanos</a>.</p>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-12 text-center">
+                    <p class="small mb-0">&copy; <?= date('Y') ?> Elecstore. Todos los derechos reservados.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

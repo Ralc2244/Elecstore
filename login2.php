@@ -1,20 +1,17 @@
 <?php
-// Configuración de la base de datos
-$host = 'localhost';
-$dbname = 'elecstore';
-$user = 'root';
-$password = '';
+$host = 'sql308.infinityfree.com';
+$dbname = 'if0_39096654_elecstore';
+$username = 'if0_39096654';
+$password = 'D6PMCsfj39K';
 
-session_start(); // Iniciar sesión para mantener al usuario logueado
+session_start(); // Iniciar sesión
 
 try {
-    // Conexión a la base de datos
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $user, $password);
+    // Conexión a la base de datos (corregido aquí)
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Verificar si el formulario fue enviado
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Verificar si los campos están vacíos
         if (empty($_POST['email']) || empty($_POST['contrasenia'])) {
             echo "<p style='color: red;'>Por favor, completa todos los campos.</p>";
         } else {
@@ -26,16 +23,14 @@ try {
             $stmt->execute(['email' => $email]);
             $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Verificar contraseña
             if ($usuario && password_verify($contrasenia, $usuario['contrasenia'])) {
-                // Contraseña correcta: guardar información en sesión
-                $_SESSION['usuario_id'] = $usuario['id']; // Guardar ID del usuario en la sesión
-                $_SESSION['nombre'] = $usuario['nombre']; // Guardar nombre en la sesión
-                $_SESSION['email'] = $usuario['email']; // Guardar email en la sesión
-                header("Location: principal.php"); // Redirigir al panel de usuario
+                // Autenticación exitosa
+                $_SESSION['usuario_id'] = $usuario['id'];
+                $_SESSION['nombre'] = $usuario['nombre'];
+                $_SESSION['email'] = $usuario['email'];
+                header("Location: principal.php");
                 exit;
             } else {
-                // Contraseña o correo incorrectos
                 echo "<p style='color: red;'>Correo o contraseña incorrectos.</p>";
             }
         }

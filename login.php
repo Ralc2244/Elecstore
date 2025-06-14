@@ -1,4 +1,5 @@
 <?php
+session_start();
 
 // Si el usuario ya ha iniciado sesión, redirigirlo a la página principal
 if (isset($_SESSION['usuario_id'])) {
@@ -8,12 +9,14 @@ if (isset($_SESSION['usuario_id'])) {
 ?>
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inicio de Sesión</title>
     <link rel="stylesheet" href="login.css">
 </head>
+
 <body>
     <div class="inicio-sesion">
         <h2>Iniciar Sesión</h2>
@@ -31,4 +34,5 @@ if (isset($_SESSION['usuario_id'])) {
         <p class="no-cuenta">¿No tienes cuenta? <a href="cuenta.php"><strong>Regístrate aquí</strong></a></p>
     </div>
 </body>
+
 </html>

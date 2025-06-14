@@ -37,6 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             } else {
                 $error = 'Credenciales incorrectas';
             }
+        } else {
+            $error = 'Credenciales incorrectas';
         }
     }
 }
@@ -47,48 +49,68 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login Administrador</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
 
         .login-container {
-            width: 300px;
-            margin: 100px auto;
-            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 25px;
             background: white;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
         }
 
         h1 {
             text-align: center;
             color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 25px;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
 
         label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #555;
         }
 
         input {
             width: 100%;
-            padding: 8px;
+            padding: 12px;
             box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
         }
 
         button {
             width: 100%;
-            padding: 10px;
+            padding: 12px;
             background: rgb(12, 12, 12);
             color: white;
             border: none;
+            border-radius: 4px;
             cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: background 0.3s;
         }
 
         button:hover {
@@ -98,6 +120,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .error {
             color: red;
             text-align: center;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                width: 95%;
+                padding: 20px 15px;
+            }
+
+            h1 {
+                font-size: 1.3rem;
+            }
+
+            input,
+            button {
+                padding: 10px;
+            }
         }
     </style>
 </head>
